@@ -34,3 +34,5 @@ app.listen(3000, () => {
 
 
 //Para levantar el servidor node index.js
+// Feat es para el commit que es una nueva funcionalidad
+//npm list pg o otra dependencia o libreria para ver su versión o si esta instalda
