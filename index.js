@@ -10,15 +10,46 @@ app.get('/', (req, res) => {
   res.send('API funcionando');
 });
 
-// ENDPOINT Creado
-app.get('/usuario', (req, res) => {
-  const usuario = {
-    id: 1,
-    nombre: 'Juan',
-    rol: 'Administrador'
-  };
+// ENDPOINT Creado usuario
+app.get('/usuarios', async (req, res) => {
+  try {
+    const resultado = await pool.query('SELECT * FROM usuario');
+    res.json(resultado.rows);
+  } catch (error) {
+    console.error('Error al consultar usuarios:', error);
+    res.status(500).json({ error: 'Error al obtener los usuarios' });
+  }
+});
 
-  res.json(usuario);
+
+
+//Endpoint de usuario (usuarios/:id)
+app.get('/usuarios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // VALIDACIÓN
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'El id debe ser numérico' });
+    }
+
+    const resultado = await pool.query(
+      'SELECT * FROM usuario WHERE id = $1',
+      [id]
+    );
+
+    // NO ENCONTRADO
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // OK
+    res.json(resultado.rows[0]);
+
+  } catch (error) {
+    console.error('Error al consultar usuario:', error);
+    res.status(500).json({ error: 'Error al obtener el usuario' });
+  }
 });
 
 // Ruta alumnos - SELECT * FROM alumno
@@ -67,6 +98,35 @@ app.get('/materias', async (req, res) => {
   }
 });
 
+//Endpoint de materia (materia/:id)
+app.get('/materias/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // VALIDACIÓN
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'El id debe ser numérico' });
+    }
+
+    const resultado = await pool.query(
+      'SELECT * FROM materia WHERE id = $1',
+      [id]
+    );
+
+    // NO ENCONTRADO
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ error: 'Materia no encontrada' });
+    }
+
+    // OK
+    res.json(resultado.rows[0]);
+
+  } catch (error) {
+    console.error('Error al consultar materia:', error);
+    res.status(500).json({ error: 'Error al obtener la materia' });
+  }
+});
+
 
 // Ruta materias con Post
 app.post('/materias', async (req, res) => {
@@ -110,4 +170,4 @@ app.listen(3000, () => {
 
 //Para levantar el servidor node index.js
 // Feat es para el commit que es una nueva funcionalidad
-//npm list pg o otra dependencia o libreria para ver su versión o si esta instalda
+//npm list "pg" o otra dependencia o libreria para ver su versión o si esta instalda
