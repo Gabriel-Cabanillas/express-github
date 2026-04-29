@@ -20,6 +20,7 @@
   "homepage": "https://github.com/Gabriel-Cabanillas/express-github#readme",
   "dependencies": {
     "express": "^5.2.1",
+    "mongoose": "^9.6.0",
     "pg": "^8.20.0"
   }
 }
