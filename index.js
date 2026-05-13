@@ -519,16 +519,57 @@ app.get("/api/getMateriasByAlumnoId/:id", async (req, res) => {
 });
 
 
-// Pool
-pool.connect()
-  .then(() => {
-    console.log('Conexión exitosa a PostgreSQL');
-  })
-  .catch((err) => {
-    console.error('Error de conexión', err);
-  });
+// ============================================================
+// INTEGRANTE 5: ALONDRA ROMAN getMateriasCountByAlumnoId
+// ============================================================
 
-// Servidor
+// GET /api/getMateriasCountByAlumnoId/:id - Cuántas materias tiene un alumno
+app.get("/api/getMateriasCountByAlumnoId/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validar que el id sea numérico
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ message: "El ID debe ser numérico" });
+    }
+
+    // Verificar que el alumno exista y esté activo
+    const alumno = await pool.query(
+      "SELECT * FROM alumno WHERE id = $1 AND isActive = true",
+      [id]
+    );
+    if (alumno.rows.length === 0) {
+      return res.status(404).json({ message: "Alumno no encontrado o inactivo" });
+    }
+
+    // COUNT para contar cuántas materias tiene asignadas
+    const result = await pool.query(
+      "SELECT COUNT(*) as total_materias FROM alumno_materia WHERE alumno_id = $1",
+      [id]
+    );
+
+    res.status(200).json({
+      message: "Conteo realizado correctamente",
+      total_materias: parseInt(result.rows[0].total_materias),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al contar materias",
+      error: error.message,
+    });
+  }
+});
+
+// ============================================================
+// CONEXIÓN Y SERVIDOR
+// ============================================================
+
+// Verificar conexión a PostgreSQL
+pool.connect()
+  .then(() => console.log('Conexión exitosa a PostgreSQL'))
+  .catch((err) => console.error('Error de conexión', err));
+
+// Levantar el servidor en puerto 3000
 app.listen(3000, () => {
   console.log('Servidor corriendo en http://localhost:3000');
 });
