@@ -419,6 +419,106 @@ app.post("/api/createMateria", async (req, res) => {
 });
 
 
+// ============================================================
+// INTEGRANTE 4: SAUL GUZMAN assignMateriaToAlumno y getMateriasByAlumnoId
+// ============================================================
+
+// POST /api/assignMateriaToAlumno - Relacionar alumno con materia
+app.post("/api/assignMateriaToAlumno", async (req, res) => {
+  try {
+    const { alumno_id, materia_id } = req.body;
+
+    // Validar que ambos campos existan y sean numéricos
+    if (!alumno_id || !materia_id) {
+      return res.status(400).json({ message: "alumno_id y materia_id son obligatorios" });
+    }
+    if (isNaN(alumno_id) || isNaN(materia_id)) {
+      return res.status(400).json({ message: "alumno_id y materia_id deben ser numéricos" });
+    }
+
+    // Verificar que el alumno exista y esté activo
+    const alumno = await pool.query(
+      "SELECT * FROM alumno WHERE id = $1 AND isActive = true",
+      [alumno_id]
+    );
+    if (alumno.rows.length === 0) {
+      return res.status(404).json({ message: "Alumno no encontrado o inactivo" });
+    }
+
+    // Verificar que la materia exista
+    const materia = await pool.query("SELECT * FROM materia WHERE id = $1", [materia_id]);
+    if (materia.rows.length === 0) {
+      return res.status(404).json({ message: "Materia no encontrada" });
+    }
+
+    // Verificar que no exista ya esa relación (evitar duplicados)
+    const relacion = await pool.query(
+      "SELECT * FROM alumno_materia WHERE alumno_id = $1 AND materia_id = $2",
+      [alumno_id, materia_id]
+    );
+    if (relacion.rows.length > 0) {
+      return res.status(400).json({ message: "El alumno ya tiene asignada esa materia" });
+    }
+
+    // Insertar la relación en la tabla intermedia
+    const result = await pool.query(
+      "INSERT INTO alumno_materia (alumno_id, materia_id) VALUES ($1, $2) RETURNING *",
+      [alumno_id, materia_id]
+    );
+
+    res.status(201).json({
+      message: "Materia asignada al alumno correctamente",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al asignar materia",
+      error: error.message,
+    });
+  }
+});
+
+// GET /api/getMateriasByAlumnoId/:id - Materias asignadas a un alumno
+app.get("/api/getMateriasByAlumnoId/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validar que el id sea numérico
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ message: "El ID debe ser numérico" });
+    }
+
+    // Verificar que el alumno exista y esté activo
+    const alumno = await pool.query(
+      "SELECT * FROM alumno WHERE id = $1 AND isActive = true",
+      [id]
+    );
+    if (alumno.rows.length === 0) {
+      return res.status(404).json({ message: "Alumno no encontrado o inactivo" });
+    }
+
+    // JOIN entre materia y alumno_materia para traer las materias del alumno
+    const result = await pool.query(
+      `SELECT m.id, m.nombre, m.semestre, m.creditos
+       FROM materia m
+       INNER JOIN alumno_materia am ON m.id = am.materia_id
+       WHERE am.alumno_id = $1`,
+      [id]
+    );
+
+    res.status(200).json({
+      message: "Materias del alumno consultadas correctamente",
+      data: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al consultar materias del alumno",
+      error: error.message,
+    });
+  }
+});
+
+
 // Pool
 pool.connect()
   .then(() => {
