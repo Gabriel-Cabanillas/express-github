@@ -223,6 +223,71 @@ app.get("/api/getAlumnoById/:id", async (req, res) => {
   }
 });
 
+// ============================================================
+// INTEGRANTE 2: DANIEL MANJARREZ searchAlumno y createAlumno
+// ============================================================
+
+// GET /api/searchAlumno?query=Juan - Buscar por nombre o apellido con LIKE
+app.get("/api/searchAlumno", async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    // Validar que query exista y no esté vacío
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "El parámetro query es obligatorio" });
+    }
+
+    // LIKE para buscar en nombre o apellido, solo alumnos activos
+    const result = await pool.query(
+      `SELECT * FROM alumno 
+       WHERE (nombre ILIKE $1 OR apellido ILIKE $1) 
+       AND isActive = true`,
+      [`%${query}%`]
+    );
+
+    res.status(200).json({
+      message: "Búsqueda realizada correctamente",
+      data: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al buscar alumno",
+      error: error.message,
+    });
+  }
+});
+
+// POST /api/createAlumno - Crear un nuevo alumno
+app.post("/api/createAlumno", async (req, res) => {
+  try {
+    const { nombre, apellido, edad, correo } = req.body;
+
+    // Validar que todos los campos existan y no estén vacíos
+    if (!nombre || !apellido || !edad || !correo) {
+      return res.status(400).json({ message: "Todos los campos son obligatorios" });
+    }
+    if (nombre.trim() === "" || apellido.trim() === "" || correo.trim() === "") {
+      return res.status(400).json({ message: "Los campos no pueden estar vacíos" });
+    }
+
+    // Insertar alumno con isActive = true por defecto
+    const result = await pool.query(
+      "INSERT INTO alumno (nombre, apellido, edad, correo, isActive) VALUES ($1, $2, $3, $4, true) RETURNING *",
+      [nombre, apellido, edad, correo]
+    );
+
+    res.status(201).json({
+      message: "Alumno creado correctamente",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al crear alumno",
+      error: error.message,
+    });
+  }
+});
+
 
 // Pool
 pool.connect()
