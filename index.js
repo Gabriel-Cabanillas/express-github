@@ -289,6 +289,136 @@ app.post("/api/createAlumno", async (req, res) => {
 });
 
 
+
+// ============================================================
+// INTEGRANTE 3: PAULINA ALVARADO iupdateAlumno, deleteAlumno, getMaterias, createMateria
+// ============================================================
+
+// PUT /api/updateAlumno/:id - Modificar un alumno existente
+app.put("/api/updateAlumno/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, apellido, edad, correo } = req.body;
+
+    // Validar que el id sea numérico
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ message: "El ID debe ser numérico" });
+    }
+
+    // Validar que se envíe al menos un campo
+    if (!nombre && !apellido && !edad && !correo) {
+      return res.status(400).json({ message: "Se debe enviar al menos un campo para modificar" });
+    }
+
+    // Verificar que el alumno exista y esté activo
+    const alumno = await pool.query(
+      "SELECT * FROM alumno WHERE id = $1 AND isActive = true",
+      [id]
+    );
+    if (alumno.rows.length === 0) {
+      return res.status(404).json({ message: "Alumno no encontrado o inactivo" });
+    }
+
+    // Si no se envía un campo, conservar el valor actual
+    const nuevoNombre = nombre || alumno.rows[0].nombre;
+    const nuevoApellido = apellido || alumno.rows[0].apellido;
+    const nuevaEdad = edad || alumno.rows[0].edad;
+    const nuevoCorreo = correo || alumno.rows[0].correo;
+
+    const result = await pool.query(
+      "UPDATE alumno SET nombre=$1, apellido=$2, edad=$3, correo=$4 WHERE id=$5 RETURNING *",
+      [nuevoNombre, nuevoApellido, nuevaEdad, nuevoCorreo, id]
+    );
+
+    res.status(200).json({
+      message: "Alumno actualizado correctamente",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al actualizar alumno",
+      error: error.message,
+    });
+  }
+});
+
+// DELETE /api/deleteAlumno/:id - Eliminación LÓGICA (isActive = false)
+app.delete("/api/deleteAlumno/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validar que el id sea numérico
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ message: "El ID debe ser numérico" });
+    }
+
+    // Verificar que el alumno exista y esté activo
+    const alumno = await pool.query(
+      "SELECT * FROM alumno WHERE id = $1 AND isActive = true",
+      [id]
+    );
+    if (alumno.rows.length === 0) {
+      return res.status(404).json({ message: "Alumno no encontrado o ya eliminado" });
+    }
+
+    // Eliminación lógica: no se borra el registro, solo se desactiva
+    await pool.query("UPDATE alumno SET isActive = false WHERE id = $1", [id]);
+
+    res.status(200).json({ message: "Alumno eliminado correctamente" });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al eliminar alumno",
+      error: error.message,
+    });
+  }
+});
+
+// GET /api/getMaterias - Consultar todas las materias
+app.get("/api/getMaterias", async (req, res) => {
+  try {
+    // Traer todas las materias de la tabla materia
+    const result = await pool.query("SELECT * FROM materia");
+    res.status(200).json({
+      message: "Materias consultadas correctamente",
+      data: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al consultar materias",
+      error: error.message,
+    });
+  }
+});
+
+// POST /api/createMateria - Crear una nueva materia
+app.post("/api/createMateria", async (req, res) => {
+  try {
+    const { nombre, semestre, creditos } = req.body;
+
+    // Validar que el nombre exista y no esté vacío
+    if (!nombre || nombre.trim() === "") {
+      return res.status(400).json({ message: "El nombre de la materia es obligatorio" });
+    }
+
+    // Insertar nueva materia
+    const result = await pool.query(
+      "INSERT INTO materia (nombre, semestre, creditos) VALUES ($1, $2, $3) RETURNING *",
+      [nombre, semestre || null, creditos || null]
+    );
+
+    res.status(201).json({
+      message: "Materia creada correctamente",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al crear materia",
+      error: error.message,
+    });
+  }
+});
+
+
 // Pool
 pool.connect()
   .then(() => {
